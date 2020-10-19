@@ -12,7 +12,7 @@ Icosphere unitsphere;
 APlanetManager::APlanetManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	MeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>("Procedural Mesh");
 
@@ -21,26 +21,21 @@ APlanetManager::APlanetManager()
 		MeshComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
 	}
 	
+	subdivisions = 4;
 }
 
 // Called when the game starts or when spawned
 void APlanetManager::BeginPlay()
 {
 	Super::BeginPlay();
-	unitsphere.make_icosphere();
+	unitsphere.make_icosphere(subdivisions);
 	construct_Icosphere();
 }
 
-// Called every frame
-void APlanetManager::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
 
-}
-
+//Fill the triangles and vertices from the instance of icosphere.
 void APlanetManager::construct_Icosphere()
 {
-	
 	m_triangles = TArray<int>(unitsphere.get_triangles_raw(), unitsphere.get_index_count());
 	m_vertices = TArray<FVector>(unitsphere.get_vertices());
 	static TArray<FColor> dummy_color;

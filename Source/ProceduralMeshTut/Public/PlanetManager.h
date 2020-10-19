@@ -20,13 +20,8 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	void ConstructSphere();
-	void MakeMesh();
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Mesh");
+	uint8 subdivisions;
 
 private:
 	UPROPERTY(Category = PPawn, VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -35,5 +30,4 @@ private:
 	void construct_Icosphere();
 	TArray<int> m_triangles;
 	TArray<FVector> m_vertices;
-
 };

@@ -4,19 +4,21 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include <unordered_map>
+#include "Containers/Map.h"
+#include <vector>
 
 
 
 struct Triangle
 {
 		// Use UPROPERTY() to decorate member variables as they allow for easier integration with network replication as well as potential garbage collection processing
-
 		int vert[3];
 };
 
 namespace icosahedron
 {
-	const float multiplier  = 5.f;
+	const float multiplier  = 200.f;
 	const float X = .525731112119133606f * multiplier;
 	const float Z = .850650808352039932f * multiplier;
 	const float N = 0.f;
@@ -39,16 +41,45 @@ namespace icosahedron
 
 }
 
+struct uint32_pair_hash
+{
+	size_t operator()(const std::pair<uint32, uint32>& x) const
+	{
+		union
+		{
+			struct
+			{
+				uint32 A;
+				uint32 B;
+			};
+			size_t C;
+		}jeffrey;
+		jeffrey.A = x.first;
+		jeffrey.B = x.second;
+		return jeffrey.C;
+	}
+};
+
+namespace std
+{
+	template<typename K, typename V>
+	using umap = std::unordered_map<K, V, uint32_pair_hash>;
+}
+
+
 class Icosphere 
 {
 public:	
 	// Sets default values for this actor's properties
 	Icosphere();
-	void make_icosphere();
+	void make_icosphere(uint8);
 
 protected:
 	// Called when the game starts or when spawned
 	//virtual void BeginPlay() override;
+
+	void subdivide();
+	uint32 FindMidPoint(uint32 v1, uint32 v2);
 
 public:	
 	// Called every frame
@@ -58,9 +89,11 @@ public:
 	uint32 get_index_count() const { return 3 * m_triangles.Num(); } //Multiply by three for each vertex
 
 	const int* get_triangles_raw() const { return (int*)m_triangles.GetData(); }
-
 private:
 	TArray<FVector> m_vertices;
 	TArray<Triangle> m_triangles;
+	std::umap<std::pair<uint32, uint32>, uint32> lookup;
+
+	//std::umap<std::pair<uint32, uint32>, uint32> lookup;
 
 };
