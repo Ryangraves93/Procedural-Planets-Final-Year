@@ -13,7 +13,7 @@ Icosphere::Icosphere()
 	//PrimaryActorTick.bCanEverTick = true;
 }
 
-//Resets the index buffers and calls subvidivision n number of times.
+//Resets the index buffers and calls subdivisions n number of times.
 void Icosphere::make_icosphere(uint8 subdivisions)
 {
 	m_vertices.Reset(16);
@@ -26,6 +26,12 @@ void Icosphere::make_icosphere(uint8 subdivisions)
 	{
 		subdivide();
 	}
+
+	for (Triangle& tri : m_triangles)
+	{
+		m_normals.Add(CalculateNormal(tri));
+		//vert *= GenerateRadius(FMath::Atan2(vert.Y, vert.X),FMath::Acos(vert.Z/vert.Size())); //acos lat
+	}
 }
 
 //For every triangle I subdivide each to create 4 triangles by using the midpoints of each as the new vertices. I create
@@ -35,7 +41,7 @@ void Icosphere::subdivide()
 	TArray<Triangle> ArrayToSwap;
 	ArrayToSwap.Reserve(m_triangles.Num() * 3);
 
-	for (auto&& triangle : m_triangles)
+	for (auto& triangle : m_triangles)
 	{
 		std::array<int, 3> mid;
 		for (int edge = 0; edge < 3; ++edge)
@@ -49,7 +55,12 @@ void Icosphere::subdivide()
 		ArrayToSwap.Add({ mid[0], mid[1] , mid[2] });
 	}
 	Swap(m_triangles, ArrayToSwap);
+
 	lookup.clear();
+}
+float Icosphere::GenerateRadius(float polar, float aziumuthal)
+{
+	return FMath::Sin(aziumuthal) + 1.f;
 }
 
 uint32 Icosphere::FindMidPoint(uint32 v1 , uint32 v2)
@@ -63,12 +74,27 @@ uint32 Icosphere::FindMidPoint(uint32 v1 , uint32 v2)
 	{
 		FVector& edge0 = m_vertices[a];
 		FVector& edge1 = m_vertices[b];
-		auto point = edge0 + edge1;
+		FVector point = edge0 + edge1;
 		point.Normalize();
-		point *= icosahedron::multiplier;
+		point *= icosahedron::radius;
 		m_vertices.Add(point);
 	}
 
 	return inserted.first->second;
+}
+
+FVector& Icosphere::CalculateNormal(Triangle& triangle)
+{
+	//Pass in the index number into the vertex array to retrieve 
+	//the correct coordinate
+	const FVector& v0 = m_vertices[triangle.vert[0]];
+	const FVector& v1 = m_vertices[triangle.vert[1]];
+	const FVector& v2 = m_vertices[triangle.vert[2]];
+
+	triangle.face = (v1 - v0) + (v2 - v0);
+	triangle.normal = FVector::CrossProduct(v1 - v0,v2 - v0);
+	triangle.normal.Normalize();
+
+	return triangle.normal;
 }
 

@@ -14,16 +14,18 @@ struct Triangle
 {
 		// Use UPROPERTY() to decorate member variables as they allow for easier integration with network replication as well as potential garbage collection processing
 		int vert[3];
+		FVector normal = FVector::ZeroVector;
+		FVector face  = FVector::ZeroVector;
 };
 
 namespace icosahedron
 {
-	const float multiplier  = 200.f;
-	const float X = .525731112119133606f * multiplier;
-	const float Z = .850650808352039932f * multiplier;
+	const float radius = 200.f;
+	const float X = .525731112119133606f * radius;
+	const float Z = .850650808352039932f *radius;
 	const float N = 0.f;
 
-	// Vertices of the mesh
+	// Vertices of the mesh formed from const vectors
 	static const TArray<FVector> Vertices =
 	{
 		{-X,N,Z}, {X,N,Z}, {-X,N,-Z}, {X,N,-Z},
@@ -31,6 +33,7 @@ namespace icosahedron
 		{Z,X,N}, {-Z,X, N}, {Z,-X,N}, {-Z,-X, N}
 	};
 
+	//Index for the vertices to form each triangle
 	static const TArray<Triangle> Triangles =
 	{
 		{0,4,1},{0,9,4},{9,5,4},{4,5,8},{4,8,1},
@@ -70,30 +73,27 @@ namespace std
 class Icosphere 
 {
 public:	
-	// Sets default values for this actor's properties
 	Icosphere();
 	void make_icosphere(uint8);
 
 protected:
-	// Called when the game starts or when spawned
-	//virtual void BeginPlay() override;
-
+	float GenerateRadius(float polar, float aziumuthal);
 	void subdivide();
 	uint32 FindMidPoint(uint32 v1, uint32 v2);
+	FVector& CalculateNormal(Triangle& vert);
 
 public:	
-	// Called every frame
-	//virtual void Tick(float DeltaTime) override;
 	const TArray<FVector>& get_vertices() const { return m_vertices;  }
 	const TArray<Triangle>& get_triangles() const { return m_triangles; }
+	const TArray<FVector>& get_normals() const { return m_normals; }
 	uint32 get_index_count() const { return 3 * m_triangles.Num(); } //Multiply by three for each vertex
 
 	const int* get_triangles_raw() const { return (int*)m_triangles.GetData(); }
 private:
 	TArray<FVector> m_vertices;
+	TArray<FVector> m_normals;
 	TArray<Triangle> m_triangles;
 	std::umap<std::pair<uint32, uint32>, uint32> lookup;
-
 	//std::umap<std::pair<uint32, uint32>, uint32> lookup;
 
 };
