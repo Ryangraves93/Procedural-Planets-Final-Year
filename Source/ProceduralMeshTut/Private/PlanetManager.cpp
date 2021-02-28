@@ -2,13 +2,13 @@
 
 
 #include "PlanetManager.h"
-#include "ProceduralMeshComponent.h"
 #include "core.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Geometry/icosphere.h"
 
 
-Icosphere unitsphere;
+
 // Sets default values
 APlanetManager::APlanetManager()
 {
@@ -21,34 +21,51 @@ APlanetManager::APlanetManager()
 		MeshComponent->SetWorldLocation(FVector(0.0f, 0.0f, 0.0f));
 	}
 
-	subdivisions = 4;
+	numberOfPlanets = 3;
+	
 }
 
 // Called when the game starts or when spawned
 void APlanetManager::BeginPlay()
 {
 	Super::BeginPlay();
-	SetActorLocation(FVector(0.0f, 0.0f, 0.0f));
+	GeneratePlanet();
 
-	unitsphere.make_icosphere(subdivisions);
-	construct_Icosphere();
 }
 
-//Fill the triangles and vertices from the instance of icosphere.
-void APlanetManager::construct_Icosphere()
+void APlanetManager::GeneratePlanet()
 {
-	m_triangles.Reserve(unitsphere.get_index_count());
+	FVector RootPosition = FVector::ZeroVector;
 
-	for (const Triangle& tri : unitsphere.get_triangles())
+	float DistanceFromCenter = 10000.f;
+
+	uint8 planetsPerRing = 1;
+	uint32 PlanetsToSpawn = 0;
+	for (uint32 i = 0; i <= numberOfPlanets; ++i)
 	{
-		for (uint8 i = 0; i < 3; ++i)
+		for (uint32 j = 0; j <= planetsPerRing; ++j)
 		{
-			m_triangles.Add(tri.vert[i]);
-		}
+			float Tau = (UKismetMathLibrary::GetPI() * 2);
+			float random = FMath::RandRange(0.f, 6.f);
+			float angle = FMath::RandRange(0.f, Tau);
 
-		DrawDebugDirectionalArrow(GetWorld(),tri.face, (tri.normal * icosahedron::radius) *1.05, 20.f,FColor::Red, true);
+			float x = FMath::Cos(random) * DistanceFromCenter;
+			float y = FMath::Sin(random) * DistanceFromCenter;
+
+			FTransform SpawnLoc;
+			FVector SpawnPosition = FVector(x * i, y * i, 0.f);
+			SpawnLoc.SetLocation(SpawnPosition);
+
+			AIcosphere* Planet = GetWorld()->SpawnActorDeferred<AIcosphere>(AIcosphere::StaticClass(), SpawnLoc); 
+			Planet->IntializeValues(i, DistanceFromCenter, FMath::RandRange(0.f, 400.f), subdivisions);
+			Planet->FinishSpawning(SpawnLoc);
+			m_planets.Add(Planet);
+		}
+		planetsPerRing++;
 	}
-	static TArray<FColor> dummy_color;
-	MeshComponent->CreateMeshSection(0, unitsphere.get_vertices(), m_triangles, unitsphere.get_normals(), TArray<FVector2D>(), dummy_color, TArray<FProcMeshTangent>(), true);
+	
 }
+
+
+
 

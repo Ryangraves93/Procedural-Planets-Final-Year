@@ -6,47 +6,24 @@
 #include "GameFramework/Actor.h"
 #include <unordered_map>
 #include "Containers/Map.h"
+#include "ProceduralMeshComponent.h"
 #include <vector>
+#include "Icosphere.generated.h"
 
-
-
-struct Triangle
+USTRUCT()
+struct FTriangle
 {
+	GENERATED_BODY()
+
 		// Use UPROPERTY() to decorate member variables as they allow for easier integration with network replication as well as potential garbage collection processing
 		int vert[3];
-		FVector normal = FVector::ZeroVector;
-		FVector face  = FVector::ZeroVector;
 };
 
-namespace icosahedron
+USTRUCT()
+struct Fuint32_pair_hash
 {
-	const float radius = 200.f;
-	const float X = .525731112119133606f * radius;
-	const float Z = .850650808352039932f *radius;
-	const float N = 0.f;
-
-	// Vertices of the mesh formed from const vectors
-	static const TArray<FVector> Vertices =
-	{
-		{-X,N,Z}, {X,N,Z}, {-X,N,-Z}, {X,N,-Z},
-		{N,Z,X}, {N,Z,-X}, {N,-Z,X}, {N,-Z,-X},
-		{Z,X,N}, {-Z,X, N}, {Z,-X,N}, {-Z,-X, N}
-	};
-
-	//Index for the vertices to form each triangle
-	static const TArray<Triangle> Triangles =
-	{
-		{0,4,1},{0,9,4},{9,5,4},{4,5,8},{4,8,1},
-		{8,10,1},{8,3,10},{5,3,8},{5,2,3},{2,7,3},
-		{7,10,3},{7,6,10},{7,11,6},{11,0,6},{0,1,6},
-		{6,1,10},{9,0,11},{9,11,2},{9,2,5},{7,2,11}
-	};
-
-}
-
-struct uint32_pair_hash
-{
-	size_t operator()(const std::pair<uint32, uint32>& x) const
+	GENERATED_BODY()
+		size_t operator()(const std::pair<uint32, uint32>& x) const
 	{
 		union
 		{
@@ -59,6 +36,12 @@ struct uint32_pair_hash
 		}jeffrey;
 		jeffrey.A = x.first;
 		jeffrey.B = x.second;
+		
+		size_t hash = 0;
+		hash += x.second;
+		hash = hash << 32;
+		hash += x.first;
+		check(hash == jeffrey.C);
 		return jeffrey.C;
 	}
 };
@@ -66,34 +49,104 @@ struct uint32_pair_hash
 namespace std
 {
 	template<typename K, typename V>
-	using umap = std::unordered_map<K, V, uint32_pair_hash>;
+	using umap = std::unordered_map<K, V, Fuint32_pair_hash>;
 }
 
-
-class Icosphere 
+UCLASS()
+class AIcosphere : public AActor
 {
+
+	GENERATED_BODY()
+
 public:	
-	Icosphere();
-	void make_icosphere(uint8);
+	AIcosphere();
+	void make_icosphere();
+
+	virtual void Tick(float DeltaTime) override;
 
 protected:
-	float GenerateRadius(float polar, float aziumuthal);
-	void subdivide();
+	virtual void BeginPlay() override;
+	float GenerateRadius(float,float);
+	void Subdivide();
 	uint32 FindMidPoint(uint32 v1, uint32 v2);
-	FVector& CalculateNormal(Triangle& vert);
+	void CalculateNormal(FTriangle& vert);
+	void OrbitSphere();
 
+//Getters to retrieve planet attributes
 public:	
 	const TArray<FVector>& get_vertices() const { return m_vertices;  }
-	const TArray<Triangle>& get_triangles() const { return m_triangles; }
+	const TArray<FTriangle>& get_triangles() const { return m_triangles; }
 	const TArray<FVector>& get_normals() const { return m_normals; }
 	uint32 get_index_count() const { return 3 * m_triangles.Num(); } //Multiply by three for each vertex
-
 	const int* get_triangles_raw() const { return (int*)m_triangles.GetData(); }
+	void IntializeValues(uint32,float,float,uint8);
+	TArray<FLinearColor> PlanetColorValues;
+	
+	
 private:
+
+	int8 m_Subdivisions;
+
+	UPROPERTY(Category = "Mesh", VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UProceduralMeshComponent* MeshComponent;
+
+	UPROPERTY()
+	UMaterialInstance* PlanetProjTex;
+
+	UFUNCTION(BlueprintCallable, Category = "Mesh")
+	void construct_Icosphere();
+
+	void Apply_Dynamic_Material();
+
+	//Planet Attributes
 	TArray<FVector> m_vertices;
 	TArray<FVector> m_normals;
-	TArray<Triangle> m_triangles;
-	std::umap<std::pair<uint32, uint32>, uint32> lookup;
-	//std::umap<std::pair<uint32, uint32>, uint32> lookup;
+	TArray<FTriangle> m_triangles;
+	TArray<int32> m_triangles32;
 
+	float Radius = FMath::RandRange(2000.f, 3000.f);
+	const float X = .525731112119133606f * Radius;
+	const float Z = .850650808352039932f * Radius;
+	const float N = 0.f;
+
+	std::umap<std::pair<uint32, uint32>, uint32> lookup;
+
+	// Vertices of the mesh formed from const vectors
+	const TArray<FVector> Vertices =
+	{
+		{-X,N,Z}, {X,N,Z}, {-X,N,-Z}, {X,N,-Z},
+		{N,Z,X}, {N,Z,-X}, {N,-Z,X}, {N,-Z,-X},
+		{Z,X,N}, {-Z,X, N}, {Z,-X,N}, {-Z,-X, N}
+	};
+
+	//Index for the vertices to form each triangle
+	const TArray<FTriangle> Triangles =
+	{
+		{0,4,1},{0,9,4},{9,5,4},{4,5,8},{4,8,1},
+		{8,10,1},{8,3,10},{5,3,8},{5,2,3},{2,7,3},
+		{7,10,3},{7,6,10},{7,11,6},{11,0,6},{0,1,6},
+		{6,1,10},{9,0,11},{9,11,2},{9,2,5},{7,2,11}
+	};
+
+	
+	float RotateSpeed;
+
+	UPROPERTY()
+	class AIcosphere* unitsphere;
+
+	float angleAxis;
+	FVector RotationVector;
+
+	float amplitude;
+
+	UPROPERTY(EditAnywhere, Category = "Noise")
+	float amplitudeMultiplier;
+
+	UPROPERTY(EditAnywhere, Category = "Noise")
+	float NoiseDivisional;
+
+	UPROPERTY(EditAnywhere, Category = "ProcedrealMesh")
+	bool generateMesh;
+
+	virtual void OnConstruction(const FTransform& Transform) override;
 };
