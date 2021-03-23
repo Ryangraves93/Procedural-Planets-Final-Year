@@ -33,16 +33,16 @@ struct Fuint32_pair_hash
 				uint32 B;
 			};
 			size_t C;
-		}jeffrey;
-		jeffrey.A = x.first;
-		jeffrey.B = x.second;
+		}hpair;
+		hpair.A = x.first;
+		hpair.B = x.second;
 		
 		size_t hash = 0;
 		hash += x.second;
 		hash = hash << 32;
 		hash += x.first;
-		check(hash == jeffrey.C);
-		return jeffrey.C;
+		check(hash == hpair.C);
+		return hpair.C;
 	}
 };
 
@@ -62,15 +62,11 @@ public:
 	AIcosphere();
 	void make_icosphere();
 
-	virtual void Tick(float DeltaTime) override;
-
 protected:
 	virtual void BeginPlay() override;
-	float GenerateRadius(float,float);
 	void Subdivide();
 	uint32 FindMidPoint(uint32 v1, uint32 v2);
 	void CalculateNormal(FTriangle& vert);
-	void OrbitSphere();
 
 //Getters to retrieve planet attributes
 public:	
@@ -79,7 +75,10 @@ public:
 	const TArray<FVector>& get_normals() const { return m_normals; }
 	uint32 get_index_count() const { return 3 * m_triangles.Num(); } //Multiply by three for each vertex
 	const int* get_triangles_raw() const { return (int*)m_triangles.GetData(); }
-	void IntializeValues(uint32,float,float,uint8);
+	const float& get_radius() const { return Radius; }
+
+	void IntializeValues(uint8 subdivisions, float radius);
+
 	TArray<FLinearColor> PlanetColorValues;
 	
 	
@@ -104,15 +103,15 @@ private:
 	TArray<FTriangle> m_triangles;
 	TArray<int32> m_triangles32;
 
-	float Radius = FMath::RandRange(2000.f, 3000.f);
-	const float X = .525731112119133606f * Radius;
-	const float Z = .850650808352039932f * Radius;
+	float Radius;
+	float X = .525731112119133606f;
+	float Z = .850650808352039932f;
 	const float N = 0.f;
 
 	std::umap<std::pair<uint32, uint32>, uint32> lookup;
 
 	// Vertices of the mesh formed from const vectors
-	const TArray<FVector> Vertices =
+	 TArray<FVector> Vertices =
 	{
 		{-X,N,Z}, {X,N,Z}, {-X,N,-Z}, {X,N,-Z},
 		{N,Z,X}, {N,Z,-X}, {N,-Z,X}, {N,-Z,-X},
@@ -128,16 +127,10 @@ private:
 		{6,1,10},{9,0,11},{9,11,2},{9,2,5},{7,2,11}
 	};
 
-	
-	float RotateSpeed;
+	float amplitude;
 
 	UPROPERTY()
 	class AIcosphere* unitsphere;
-
-	float angleAxis;
-	FVector RotationVector;
-
-	float amplitude;
 
 	UPROPERTY(EditAnywhere, Category = "Noise")
 	float amplitudeMultiplier;

@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "PlanetManager.generated.h"
 
-DECLARE_STATS_GROUP(TEXT("Ryan"), STATGROUP_Test, STATCAT_Advanced);
+DECLARE_STATS_GROUP(TEXT("Test"), STATGROUP_Test, STATCAT_Advanced);
 DECLARE_CYCLE_STAT(TEXT("Construct Mesh"), STAT_ConstructMesh,STATGROUP_Test);
 class UProceduralMeshComponent;
 class AIcosphere;
@@ -25,6 +25,11 @@ protected:
 	virtual void BeginPlay() override;
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Mesh");
 	uint8 subdivisions;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Planets");
+	uint8 planetMultiplier;
+
+	bool IsValidSpawnPoint(const FVector& SpawnPoint, const float& radius);
 
 private:
 

@@ -11,7 +11,7 @@
 AIcosphere::AIcosphere()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	MeshComponent = CreateDefaultSubobject<UProceduralMeshComponent>("Mesh");
 
@@ -28,28 +28,33 @@ AIcosphere::AIcosphere()
 	}
 	MeshComponent->SetMaterial(0, PlanetProjTex);
 
-
-	amplitudeMultiplier = FMath::RandRange(.050f, .25f);
-
-	amplitude = Radius * amplitudeMultiplier;
-	Apply_Dynamic_Material();
-
-	RotateSpeed = 0.2f;
-
-	RotationVector = FVector::ZeroVector;
-
-
-
 	NoiseDivisional = FMath::RandRange(.1f, .25f);
 
 	generateMesh = false;
 }
 
-void AIcosphere::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
+//Construct the triangles array. Adds a 3D Perlin Noise value to each vertex on the sphere.
+//Then Creates a call to pass in the parameters to the create mesh component.
 
-	//OrbitSphere();
+void AIcosphere::construct_Icosphere()
+{
+	m_triangles.Reserve(get_index_count());
+
+	for (const FTriangle& tri : get_triangles())
+	{
+		for (uint8 i = 0; i < 3; ++i)
+		{
+			m_triangles32.Add(tri.vert[i]);
+		}
+	}
+
+	for (FVector& vert : m_vertices)
+	{
+		vert += FMath::PerlinNoise3D(vert / (Radius * NoiseDivisional)) * amplitude * vert.GetSafeNormal();
+	}
+
+	static TArray<FColor> dummy_color;
+	MeshComponent->CreateMeshSection(0, m_vertices, m_triangles32, m_normals, TArray<FVector2D>(), dummy_color, TArray<FProcMeshTangent>(), true);
 }
 
 void AIcosphere::BeginPlay()
@@ -59,15 +64,29 @@ void AIcosphere::BeginPlay()
 	make_icosphere();
 }
 
-void AIcosphere::IntializeValues(uint32 DistanceModifier, float rotation, float angleSpeed, uint8 subdivisions)
+//Values set pre construction which add dynamic attributes to the
+//spheres.
+void AIcosphere::IntializeValues(uint8 subdivisions,float _radius)
 {
-	float SpawnAngle = FMath::RandRange(0.f, 360.f);
-
-	RotationVector.X = rotation;
-
-	angleAxis = FMath::RandRange(0.f, 259.f);
+	Radius = _radius;
+	X *= Radius;
+	Z *= Radius;
 
 	m_Subdivisions = subdivisions;
+
+	amplitudeMultiplier = FMath::RandRange(.050f, .15f);
+	amplitude = Radius * amplitudeMultiplier;
+
+	Apply_Dynamic_Material();
+
+	TArray<FVector> ArrayToSwap =
+	{
+		{-X, N, Z}, { X,N,Z }, { -X,N,-Z }, { X,N,-Z },
+		{ N,Z,X }, { N,Z,-X }, { N,-Z,X }, { N,-Z,-X },
+		{ Z,X,N }, { -Z,X, N }, { Z,-X,N }, { -Z,-X, N }
+	};
+
+	Swap(Vertices, ArrayToSwap);
 }
 
 //Resets the index buffers and calls subdivisions n number of times.
@@ -83,7 +102,6 @@ void AIcosphere::make_icosphere()
 	for (FVector& vert : m_vertices)
 	{
 		m_normals.Add(vert);
-		//vert *= GenerateRadius(FMath::Atan2(vert.Y, vert.X),FMath::Acos(vert.Z/vert.Size())); //acos lat
 	}
 
 	for (uint8 i = 0; i <= m_Subdivisions; ++i)
@@ -119,10 +137,7 @@ void AIcosphere::Subdivide()
 
 	lookup.clear();
 }
-float AIcosphere::GenerateRadius(float polar, float aziumuthal)
-{
-	return FMath::Sin(aziumuthal) + 1.f;
-}
+
 
 uint32 AIcosphere::FindMidPoint(uint32 v1, uint32 v2)
 {
@@ -151,6 +166,8 @@ uint32 AIcosphere::FindMidPoint(uint32 v1, uint32 v2)
 	return inserted.first->second;
 }
 
+
+//
 void AIcosphere::CalculateNormal(FTriangle& triangle)
 {
 	//Pass in the index number into the vertex array to retrieve 
@@ -162,26 +179,6 @@ void AIcosphere::CalculateNormal(FTriangle& triangle)
 	const FVector& v2 = m_vertices[triangle.vert[2]];
 }
 
-void AIcosphere::construct_Icosphere()
-{
-	m_triangles.Reserve(get_index_count());
-
-	for (const FTriangle& tri : get_triangles())
-	{
-		for (uint8 i = 0; i < 3; ++i)
-		{
-			m_triangles32.Add(tri.vert[i]);
-		}
-	}
-
-	for (FVector& vert : m_vertices)
-	{
-		vert += FMath::PerlinNoise3D(vert / (Radius * NoiseDivisional)) * amplitude * vert.GetSafeNormal();
-	}
-
-	static TArray<FColor> dummy_color;
-	MeshComponent->CreateMeshSection(0, m_vertices, m_triangles32, m_normals, TArray<FVector2D>(), dummy_color, TArray<FProcMeshTangent>(), true);
-}
 
 void AIcosphere::Apply_Dynamic_Material()
 {
@@ -219,17 +216,4 @@ void AIcosphere::OnConstruction(const FTransform& Transform)
 	}
 }
 
-void AIcosphere::OrbitSphere()
-{
-	angleAxis += 0.2f;
-
-	if (angleAxis > 360.f)
-	{
-		angleAxis = 1;
-	}
-
-	FVector RotateValue = RotationVector.RotateAngleAxis(angleAxis, FVector::UpVector);
-
-	SetActorLocation(RotateValue);
-}
 
